@@ -202,7 +202,20 @@ let
     (drv.nativeBuildInputs or [ ]) ++
     (drv.propagatedBuildInputs or [ ]) ++
     (drv.propagatedNativeBuildInputs or [ ])
-  ;
+    ;
+
+  buildInputsOf = drv:
+    (drv.buildInputs or [ ]);
+
+  nativeBuildInputsOf = drv:
+    (drv.nativeBuildInputs or [ ]);
+
+  propagatedBuildInputsOf = drv:
+    (drv.propagatedBuildInputs or [ ]);
+
+  propagatedNativeBuildInputsOf = drv:
+    (drv.propagatedNativeBuildInputs or [ ]);
+
 
 in
 {
@@ -308,6 +321,42 @@ in
       '';
     };
 
+    buildInputs = mkOption {
+      type = types.listOf strOrPackage;
+      default = [ ];
+      description = ''
+        Add all the build dependencies from the listed packages to the
+        environment.
+      '';
+    };
+
+    nativeBuildInputs = mkOption {
+      type = types.listOf strOrPackage;
+      default = [ ];
+      description = ''
+        Add all the build dependencies from the listed packages to the
+        environment.
+      '';
+    };
+
+    propagatedNativeBuildInputs = mkOption {
+      type = types.listOf strOrPackage;
+      default = [ ];
+      description = ''
+        Add all the build dependencies from the listed packages to the
+        environment.
+      '';
+    };
+
+    propagatedBuildInputs = mkOption {
+      type = types.listOf strOrPackage;
+      default = [ ];
+      description = ''
+        Add all the build dependencies from the listed packages to the
+        environment.
+      '';
+    };
+
     shell = mkOption {
       internal = true;
       type = types.package;
@@ -351,6 +400,11 @@ in
     package = devshell_dir;
 
     packages = foldl' (sum: drv: sum ++ (inputsOf drv)) [ ] cfg.packagesFrom;
+
+    buildInputs = foldl' (sum: drv: sum ++ (buildInputsOf drv)) [ ] cfg.packagesFrom;
+    nativeBuildInputs = foldl' (sum: drv: sum ++ (nativeBuildInputsOf drv)) [ ] cfg.packagesFrom;
+    propagatedBuildInputs = foldl' (sum: drv: sum ++ (propagatedBuildInputsOf drv)) [ ] cfg.packagesFrom;
+    propagatedNativeBuildInputs = foldl' (sum: drv: sum ++ (propagatedNativeBuildInputsOf drv)) [ ] cfg.packagesFrom;
 
     startup = {
       motd = noDepEntry ''
