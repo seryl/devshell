@@ -1,8 +1,8 @@
-{
-  bashInteractive,
-  coreutils,
-  stdenv,
-  writeTextFile,
+{ bashInteractive
+, coreutils
+, system
+, writeTextFile
+, pkgs
 }:
 let
   bashPath = "${bashInteractive}/bin/bash";
@@ -24,14 +24,14 @@ in
   name,
   # A path to a buildEnv that will be loaded by the shell.
   # We assume that the buildEnv contains an ./env.bash script.
-  profile,
-  meta ? { },
-  passthru ? { },
+  profile
+, meta ? { }
+, passthru ? { }
+, buildInputs ? [ ]
+, nativeBuildInputs ? [ ]
 }:
-(derivation {
-  inherit name;
-
-  system = stdenv.hostPlatform.system;
+(pkgs.mkShell {
+  inherit name system;
 
   # `nix develop` actually checks and uses builder. And it must be bash.
   builder = bashPath;
@@ -50,12 +50,12 @@ in
   # requires that other trampoline.
   shellHook = ''
     # Remove all the unnecessary noise that is set by the build env
-    unset NIX_BUILD_TOP NIX_BUILD_CORES NIX_STORE
-    unset TEMP TEMPDIR TMP TMPDIR
+    # unset NIX_BUILD_TOP NIX_BUILD_CORES NIX_STORE
+    # unset TEMP TEMPDIR TMP TMPDIR
     # $name variable is preserved to keep it compatible with pure shell https://github.com/sindresorhus/pure/blob/47c0c881f0e7cfdb5eaccd335f52ad17b897c060/pure.zsh#L235
-    unset builder out shellHook stdenv system
+    # unset builder out shellHook stdenv system
     # Flakes stuff
-    unset dontAddDisableDepTrack outputs
+    # unset dontAddDisableDepTrack outputs
 
     # For `nix develop`. We get /noshell on Linux and /sbin/nologin on macOS.
     if [[ "$SHELL" == "/noshell" || "$SHELL" == "/sbin/nologin" ]]; then
@@ -65,8 +65,7 @@ in
     # Load the environment
     source "${profile}/env.bash"
   '';
-})
-// {
-  inherit meta passthru;
-}
-// passthru
+
+  buildInputs = buildInputs;
+  nativeBuildInputs = nativeBuildInputs;
+}) // { inherit meta passthru; } // passthru

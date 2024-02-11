@@ -226,14 +226,24 @@ let
   };
 
   # Returns a list of all the input derivation ... for a derivation.
-  inputsOf =
-    drv:
-    filter lib.isDerivation (
-      (drv.buildInputs or [ ])
-      ++ (drv.nativeBuildInputs or [ ])
-      ++ (drv.propagatedBuildInputs or [ ])
-      ++ (drv.propagatedNativeBuildInputs or [ ])
-    );
+  inputsOf = drv:
+    (drv.buildInputs or [ ]) ++
+    (drv.nativeBuildInputs or [ ]) ++
+    (drv.propagatedBuildInputs or [ ]) ++
+    (drv.propagatedNativeBuildInputs or [ ])
+    ;
+
+  buildInputsOf = drv:
+    (drv.buildInputs or [ ]);
+
+  nativeBuildInputsOf = drv:
+    (drv.nativeBuildInputs or [ ]);
+
+  propagatedBuildInputsOf = drv:
+    (drv.propagatedBuildInputs or [ ]);
+
+  propagatedNativeBuildInputsOf = drv:
+    (drv.propagatedNativeBuildInputs or [ ]);
 
 in
 {
@@ -337,6 +347,42 @@ in
       '';
     };
 
+    buildInputs = mkOption {
+      type = types.listOf strOrPackage;
+      default = [ ];
+      description = ''
+        Add all the build dependencies from the listed packages to the
+        environment.
+      '';
+    };
+
+    nativeBuildInputs = mkOption {
+      type = types.listOf strOrPackage;
+      default = [ ];
+      description = ''
+        Add all the build dependencies from the listed packages to the
+        environment.
+      '';
+    };
+
+    propagatedNativeBuildInputs = mkOption {
+      type = types.listOf strOrPackage;
+      default = [ ];
+      description = ''
+        Add all the build dependencies from the listed packages to the
+        environment.
+      '';
+    };
+
+    propagatedBuildInputs = mkOption {
+      type = types.listOf strOrPackage;
+      default = [ ];
+      description = ''
+        Add all the build dependencies from the listed packages to the
+        environment.
+      '';
+    };
+
     shell = mkOption {
       internal = true;
       type = types.package;
@@ -383,13 +429,33 @@ in
 
     packages = foldl' (sum: drv: sum ++ (inputsOf drv)) [ ] cfg.packagesFrom;
 
-    startup =
-      {
-        motd = noDepEntry ''
-          __devshell-motd() {
-            cat <<DEVSHELL_PROMPT
-          ${cfg.motd}
-          DEVSHELL_PROMPT
+    buildInputs = foldl' (sum: drv: sum ++ (buildInputsOf drv)) [ ] cfg.packagesFrom;
+    nativeBuildInputs = foldl' (sum: drv: sum ++ (nativeBuildInputsOf drv)) [ ] cfg.packagesFrom;
+    propagatedBuildInputs = foldl' (sum: drv: sum ++ (propagatedBuildInputsOf drv)) [ ] cfg.packagesFrom;
+    propagatedNativeBuildInputs = foldl' (sum: drv: sum ++ (propagatedNativeBuildInputsOf drv)) [ ] cfg.packagesFrom;
+
+    startup = {
+      motd = noDepEntry ''
+        __devshell-motd() {
+          cat <<DEVSHELL_PROMPT
+        ${cfg.motd}
+        DEVSHELL_PROMPT
+        }
+
+        if [[ ''${DEVSHELL_NO_MOTD:-} = 1 ]]; then
+          # Skip if that env var is set
+          :
+        elif [[ ''${DIRENV_IN_ENVRC:-} = 1 ]]; then
+          # Print the motd in direnv
+          __devshell-motd
+        else
+          # Print information if the prompt is displayed. We have to make
+          # that distinction because `nix-shell -c "cmd"` is running in
+          # interactive mode.
+          __devshell-prompt() {
+            __devshell-motd
+            # Make it a noop
+            __devshell-prompt() { :; }
           }
 
           if [[ ''${DEVSHELL_NO_MOTD:-} = 1 ]]; then
